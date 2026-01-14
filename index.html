@@ -4,229 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Civ Clone: Flat Top Grid</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://pixijs.download/v7.3.2/pixi.min.js"></script>
-
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Lato:wght@400;700&display=swap');
-
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #0b0f19;
-            font-family: 'Lato', sans-serif;
-            user-select: none;
-        }
-
-        .civ-font { font-family: 'Cinzel', serif; }
-        
-        /* UI Panel Styling */
-        .glass-panel {
-            background: rgba(20, 25, 35, 0.95);
-            border: 1px solid #334155;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-            backdrop-filter: blur(5px);
-            color: #e2e8f0;
-        }
-    </style>
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-
-    <canvas id="game-canvas" class="absolute inset-0 z-0"></canvas>
+    <canvas id="game-canvas"></canvas>
 
     <!-- UI Layer -->
-    <div id="ui-layer" class="absolute inset-0 flex flex-col justify-between p-6 z-10 pointer-events-none">
+    <div id="ui-layer">
         <!-- Top HUD -->
-        <div class="pointer-events-auto mx-auto glass-panel rounded-full px-8 py-2 flex items-center gap-6 border-b-2 border-yellow-700">
-            <span class="text-yellow-500 font-bold civ-font text-lg">CIVILIZATION</span>
-            <div class="h-6 w-px bg-slate-600"></div>
-            <span class="text-xs font-bold text-slate-300">Gold: <span class="text-yellow-400">120</span></span>
-            <span class="text-xs font-bold text-slate-300">Turn: <span class="text-white">1</span></span>
+        <div class="glass-panel top-hud">
+            <span class="title civ-font">CIVILIZATION</span>
+            <div class="divider"></div>
+            <span class="stat">Gold: <span class="stat-value">120</span></span>
+            <span class="stat">Turn: <span class="stat-value white">1</span></span>
         </div>
 
-        <!-- Bottom Actions -->
-        <div class="pointer-events-auto self-center mb-6 glass-panel p-4 rounded-xl hidden" id="selection-panel">
-            <h2 id="hex-info" class="text-center font-bold text-yellow-500 civ-font mb-2">Unknown</h2>
-            <div class="text-xs text-center text-slate-400">Flat-Top Grid System</div>
+        <!-- Bottom Selection Panel -->
+        <div class="glass-panel hidden" id="selection-panel">
+            <h2 id="hex-info" class="civ-font">Unknown</h2>
+            <div class="subtitle">Flat-Top Grid System</div>
         </div>
     </div>
 
-    <script type="module">
-        import { defineHex, Grid, rectangle } from 'https://esm.sh/honeycomb-grid@4.1.4';
-
-        // CONFIGURATION
-        const HEX_SIZE = 35;       
-        const ORIENTATION = 'flat'; // Critical Change: Flat Top
-        const BLEED = 0.5;          // Overlap to fix gaps
-
-        class RenderEngine {
-            constructor() {
-                this.app = new PIXI.Application({
-                    view: document.getElementById('game-canvas'),
-                    resizeTo: window,
-                    backgroundColor: 0x111111,
-                    antialias: true,
-                    resolution: window.devicePixelRatio || 1,
-                    autoDensity: true
-                });
-
-                this.world = new PIXI.Container();
-                this.app.stage.addChild(this.world);
-                
-                this.terrain = new PIXI.Graphics();
-                this.grid = new PIXI.Graphics();
-                this.highlight = new PIXI.Graphics();
-
-                this.world.addChild(this.terrain);
-                this.world.addChild(this.grid);
-                this.world.addChild(this.highlight);
-
-                this.setupInput();
-            }
-
-            // FLAT TOP MATH: Angles are 0, 60, 120, 180, 240, 300
-            getHexCorners(x, y, size) {
-                const corners = [];
-                for (let i = 0; i < 6; i++) {
-                    const angle_deg = 60 * i; // Flat top starts at 0 degrees
-                    const angle_rad = Math.PI / 180 * angle_deg;
-                    corners.push({
-                        x: x + size * Math.cos(angle_rad),
-                        y: y + size * Math.sin(angle_rad)
-                    });
-                }
-                return corners;
-            }
-
-            drawMap(grid, dataMap) {
-                const t = this.terrain;
-                const g = this.grid;
-                t.clear();
-                g.clear();
-
-                grid.forEach(hex => {
-                    const id = `${hex.q},${hex.r}`;
-                    const data = dataMap.get(id);
-
-                    // 1. Terrain Fill (With Bleed)
-                    const fillCorners = this.getHexCorners(hex.x, hex.y, HEX_SIZE + BLEED);
-                    t.beginFill(this.getColor(data.type));
-                    t.moveTo(fillCorners[0].x, fillCorners[0].y);
-                    for(let i=1; i<6; i++) t.lineTo(fillCorners[i].x, fillCorners[i].y);
-                    t.closePath();
-                    t.endFill();
-
-                    // 2. Grid Outline (Exact Size)
-                    const lineCorners = this.getHexCorners(hex.x, hex.y, HEX_SIZE);
-                    g.lineStyle(1, 0xffffff, 0.1); // Very subtle grid
-                    g.moveTo(lineCorners[0].x, lineCorners[0].y);
-                    for(let i=1; i<6; i++) g.lineTo(lineCorners[i].x, lineCorners[i].y);
-                    g.closePath();
-                });
-            }
-
-            drawHighlight(hex) {
-                const h = this.highlight;
-                h.clear();
-                if(!hex) return;
-                
-                const corners = this.getHexCorners(hex.x, hex.y, HEX_SIZE);
-                h.lineStyle(3, 0xfacc15, 0.8);
-                h.moveTo(corners[0].x, corners[0].y);
-                for(let i=1; i<6; i++) h.lineTo(corners[i].x, corners[i].y);
-                h.closePath();
-            }
-
-            getColor(type) {
-                // Civ 5 Style Colors
-                const map = {
-                    'Grassland': 0x47602f,
-                    'Plains': 0x6e6838,
-                    'Desert': 0xbd9a60,
-                    'Tundra': 0x75787b,
-                    'Snow': 0xcfdce4,
-                    'Mountain': 0x464543,
-                    'Ocean': 0x1d354c,
-                    'Coast': 0x295170
-                };
-                return map[type] || 0xFF00FF;
-            }
-
-            setupInput() {
-                // Center Map
-                this.world.x = this.app.screen.width / 2 - 400;
-                this.world.y = this.app.screen.height / 2 - 300;
-
-                // Dragging Logic
-                let dragging = false; 
-                let lastPos = null;
-                const stage = this.app.stage;
-                stage.eventMode = 'static';
-                stage.hitArea = this.app.screen;
-
-                stage.on('pointerdown', e => {
-                    dragging = true;
-                    lastPos = { x: e.global.x, y: e.global.y };
-                });
-                const stop = () => dragging = false;
-                stage.on('pointerup', stop);
-                stage.on('pointerupoutside', stop);
-                stage.on('pointermove', e => {
-                    if(!dragging) return;
-                    const cur = { x: e.global.x, y: e.global.y };
-                    this.world.x += (cur.x - lastPos.x);
-                    this.world.y += (cur.y - lastPos.y);
-                    lastPos = cur;
-                });
-                
-                // Zoom
-                document.getElementById('game-canvas').addEventListener('wheel', e => {
-                    e.preventDefault();
-                    const s = this.world.scale.x * (e.deltaY > 0 ? 0.9 : 1.1);
-                    this.world.scale.set(Math.max(0.2, Math.min(s, 3)));
-                }, {passive:false});
-            }
-        }
-
-        // INIT LOGIC
-        const Hex = defineHex({ dimensions: HEX_SIZE, orientation: ORIENTATION });
-        const grid = new Grid(Hex, rectangle({ width: 25, height: 16 }));
-        const dataMap = new Map();
-
-        // Generate Map Data
-        grid.forEach(hex => {
-            // Perlin-ish noise
-            const noise = Math.sin(hex.q*0.4) + Math.cos(hex.r*0.4 + hex.q*0.2);
-            let type = 'Ocean';
-            if(noise > 1.2) type = 'Mountain';
-            else if(noise > 1.0) type = 'Snow';
-            else if(noise > 0.6) type = 'Tundra';
-            else if(noise > 0.1) type = 'Grassland';
-            else if(noise > -0.3) type = 'Plains';
-            else if(noise > -0.5) type = 'Desert';
-            else if(noise > -0.8) type = 'Coast';
-            
-            dataMap.set(`${hex.q},${hex.r}`, { type });
-        });
-
-        const engine = new RenderEngine();
-        engine.drawMap(grid, dataMap);
-
-        // Click Handler
-        engine.app.stage.on('pointertap', e => {
-            const worldPos = engine.world.toLocal(e.global);
-            const hex = grid.pointToHex(worldPos);
-            
-            if(grid.hasHex(hex)) {
-                engine.drawHighlight(hex);
-                const data = dataMap.get(`${hex.q},${hex.r}`);
-                
-                const p = document.getElementById('selection-panel');
-                p.classList.remove('hidden');
-                document.getElementById('hex-info').innerText = data.type;
-            }
-        });
-
-    </script>
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>
