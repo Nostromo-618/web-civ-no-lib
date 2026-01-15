@@ -2,6 +2,8 @@
 
 import { HexGrid } from './core/HexGrid.js';
 import { RenderEngine } from './core/RenderEngine.js';
+import { GameState } from './core/GameState.js';
+import { HexData } from './core/HexData.js';
 import { TerrainType } from './data/terrain.js';
 import { HEX_SIZE, GRID_WIDTH, GRID_HEIGHT } from './config.js';
 
@@ -63,11 +65,21 @@ function init() {
 
     // Create grid and generate terrain
     const grid = new HexGrid(HEX_SIZE, GRID_WIDTH, GRID_HEIGHT);
-    const dataMap = generateTerrain(grid);
+    const terrainMap = generateTerrain(grid);
+
+    // Convert terrain data to HexData objects
+    const dataMap = new Map();
+    terrainMap.forEach((terrainData, hexId) => {
+        dataMap.set(hexId, new HexData(hexId, terrainData));
+    });
+
+    // Initialize game state with Red and Blue nations
+    const gameState = GameState.createDefault();
 
     // Create renderer
     const engine = new RenderEngine(canvas);
     engine.setData(grid, dataMap);
+    engine.setGameState(gameState);
 
     // Handle hex selection
     engine.onHexSelect((hexData) => {

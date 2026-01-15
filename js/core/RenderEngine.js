@@ -23,6 +23,7 @@ export class RenderEngine {
     #transform = { x: 0, y: 0, scale: 1 };
     #grid = null;
     #dataMap = null;
+    #gameState = null;
     #selectedHex = null;
     #onHexSelectCallback = null;
     #initialPositionSet = false;
@@ -48,6 +49,14 @@ export class RenderEngine {
     setData(grid, dataMap) {
         this.#grid = grid;
         this.#dataMap = dataMap;
+    }
+
+    /**
+     * Set the game state for rendering nations, cities, and units
+     * @param {GameState} gameState - The game state
+     */
+    setGameState(gameState) {
+        this.#gameState = gameState;
     }
 
     /**
@@ -81,7 +90,9 @@ export class RenderEngine {
         this.#grid.forEach((hex) => {
             const id = `${hex.q},${hex.r}`;
             const data = this.#dataMap.get(id);
-            const color = TERRAIN_COLORS[data.type] || DEFAULT_TERRAIN_COLOR;
+            // Handle both HexData objects and plain terrain data for backwards compatibility
+            const terrainType = data.terrain ? data.terrain.type : data.type;
+            const color = TERRAIN_COLORS[terrainType] || DEFAULT_TERRAIN_COLOR;
             this.#drawHexagon(hex.x, hex.y, HEX_SIZE + BLEED, color, null, 0);
         });
 
@@ -99,6 +110,48 @@ export class RenderEngine {
                 this.#drawHexagon(hex.x, hex.y, HEX_SIZE, null, HIGHLIGHT_COLOR, HIGHLIGHT_WIDTH);
             }
         }
+
+        // Draw game entities (nations, cities, units)
+        if (this.#gameState) {
+            this.#renderNations();
+            this.#renderCities();
+            this.#renderUnits();
+        }
+    }
+
+    /**
+     * Render nation borders and ownership
+     * TODO: Implement rendering of nation-controlled hexes
+     * - Draw borders around owned territory
+     * - Show nation colors on hexes
+     */
+    #renderNations() {
+        // TODO: Iterate through all nations
+        // For each nation, get owned hexes and render borders/colors
+    }
+
+    /**
+     * Render cities on the map
+     * TODO: Implement city rendering
+     * - Draw city markers at city positions
+     * - Show city names
+     * - Display city size/population indicator
+     */
+    #renderCities() {
+        // TODO: Get all cities from all nations
+        // For each city, get position and render city marker
+    }
+
+    /**
+     * Render units on the map
+     * TODO: Implement unit rendering
+     * - Draw unit icons/sprites at unit positions
+     * - Show unit type indicators
+     * - Display movement/health status if needed
+     */
+    #renderUnits() {
+        // TODO: Get all units from all nations
+        // For each unit, get position and render unit marker
     }
 
     #resize() {
