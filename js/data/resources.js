@@ -21,16 +21,12 @@ export class ResourceManager {
      */
     constructor(initialResources = {}) {
         // TODO: Initialize resource storage
-        // Store resources as: { [ResourceType.GOLD]: number, ... }
-    }
-
-    /**
-     * Get the current amount of a resource
-     * @param {string} resourceType - The resource type
-     * @returns {number} Current amount
-     */
-    get(resourceType) {
-        // TODO: Return current resource amount
+        this.resources = initialResources || {
+            [ResourceType.GOLD]: 0,
+            [ResourceType.FOOD]: 0,
+            [ResourceType.PRODUCTION]: 0,
+            [ResourceType.SCIENCE]: 0,
+        };
     }
 
     /**
