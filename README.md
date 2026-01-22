@@ -1,4 +1,4 @@
-# Web-Civ
+# Web-Civ-No-Lib
 
 A browser-based Civilization-style strategy game built with pure HTML, CSS, and JavaScript.
 
