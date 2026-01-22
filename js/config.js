@@ -1,8 +1,8 @@
 'use strict';
 
 export const HEX_SIZE = 35;
-export const GRID_WIDTH = 25;
-export const GRID_HEIGHT = 16;
+export const GRID_WIDTH = 71;
+export const GRID_HEIGHT = 45;
 export const BLEED = 0.5;
 export const ZOOM_MIN = 0.2;
 export const ZOOM_MAX = 3;

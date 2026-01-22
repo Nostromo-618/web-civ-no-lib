@@ -27,7 +27,9 @@ export class HexGrid {
 
     #generateGrid() {
         for (let r = 0; r < this.#height; r++) {
-            for (let q = 0; q < this.#width; q++) {
+            // Offset for this row to create rectangular appearance
+            const qOffset = Math.floor(r / 2);
+            for (let q = -qOffset; q < this.#width - qOffset; q++) {
                 const pixel = hexToPixel(q, r, this.#size);
                 this.#hexes.set(`${q},${r}`, { q, r, x: pixel.x, y: pixel.y });
             }
