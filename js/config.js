@@ -12,3 +12,4 @@ export const GRID_LINE_COLOR = '#ffffff';
 export const GRID_LINE_ALPHA = 0.1;
 export const HIGHLIGHT_COLOR = '#facc15';
 export const HIGHLIGHT_WIDTH = 3;
+export const GRID_ROTATION = -Math.PI / 6; // -30° CCW to align grid rectangle with screen

@@ -1,5 +1,11 @@
 'use strict';
 
+import { GRID_ROTATION } from '../config.js';
+
+// Pre-compute rotation values for performance
+const COS_ROT = Math.cos(GRID_ROTATION);
+const SIN_ROT = Math.sin(GRID_ROTATION);
+
 /**
  * Convert hex axial coordinates to pixel coordinates (flat-top orientation)
  * @param {number} q - Hex column coordinate
@@ -8,9 +14,13 @@
  * @returns {{x: number, y: number}} Pixel coordinates
  */
 export function hexToPixel(q, r, size) {
-    const x = size * 1.5 * q;
-    const y = size * Math.sqrt(3) * (r + q * 0.5);
-    return { x, y };
+    const baseX = size * 1.5 * q;
+    const baseY = size * Math.sqrt(3) * (r + q * 0.5);
+    // Apply rotation matrix
+    return {
+        x: baseX * COS_ROT - baseY * SIN_ROT,
+        y: baseX * SIN_ROT + baseY * COS_ROT
+    };
 }
 
 /**
@@ -21,8 +31,12 @@ export function hexToPixel(q, r, size) {
  * @returns {{q: number, r: number}} Hex coordinates (rounded)
  */
 export function pixelToHex(px, py, size) {
-    const q = (2 / 3 * px) / size;
-    const r = (-1 / 3 * px + Math.sqrt(3) / 3 * py) / size;
+    // Apply inverse rotation first
+    const x = px * COS_ROT + py * SIN_ROT;
+    const y = -px * SIN_ROT + py * COS_ROT;
+    // Then standard conversion
+    const q = (2 / 3 * x) / size;
+    const r = (-1 / 3 * x + Math.sqrt(3) / 3 * y) / size;
     return axialRound(q, r);
 }
 
@@ -62,7 +76,7 @@ export function getHexCorners(x, y, size) {
     const corners = [];
     for (let i = 0; i < 6; i++) {
         const angleDeg = 60 * i;
-        const angleRad = (Math.PI / 180) * angleDeg;
+        const angleRad = (Math.PI / 180) * angleDeg + GRID_ROTATION;
         corners.push({
             x: x + size * Math.cos(angleRad),
             y: y + size * Math.sin(angleRad)
