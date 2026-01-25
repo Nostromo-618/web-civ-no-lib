@@ -2,6 +2,7 @@
 
 import { ResourceManager, ResourceType } from '../data/resources.js';
 import { AgeType } from '../data/ages.js';
+import { getTerrainYields } from '../data/yields.js';
 
 /**
  * Represents a player nation in the game
@@ -15,13 +16,11 @@ export class Nation {
     constructor(name, color) {
         this.name = name;
         this.color = color;
-        
-        // TODO: Initialize nation properties
-        // - resources: ResourceManager instance
-        // - cities: Array of City objects
-        // - units: Array of Unit objects
-        // - currentAge: Current age (starts at AgeType.ANCIENT)
-        // - technologies: Array of researched technologies
+        this.resources = new ResourceManager();
+        this.cities = [];
+        this.units = [];
+        this.currentAge = AgeType.ANCIENT;
+        this.technologies = [];
     }
 
     /**
@@ -29,7 +28,7 @@ export class Nation {
      * @returns {string} Nation name
      */
     getName() {
-        // TODO: Return name
+        return this.name;
     }
 
     /**
@@ -37,7 +36,7 @@ export class Nation {
      * @returns {string} Color identifier
      */
     getColor() {
-        // TODO: Return color
+        return this.color;
     }
 
     /**
@@ -45,7 +44,7 @@ export class Nation {
      * @returns {string} Current age type
      */
     getAge() {
-        // TODO: Return current age
+        return this.currentAge;
     }
 
     /**
@@ -53,10 +52,15 @@ export class Nation {
      * @returns {boolean} True if age was advanced
      */
     advanceAge() {
-        // TODO: Check if can advance age
-        // Update currentAge to next age
-        // Apply age-specific bonuses
-        // Return true if successful
+        // Basic implementation - will be expanded with AgeManager
+        if (this.currentAge === AgeType.ANCIENT) {
+            this.currentAge = AgeType.MODERN;
+            return true;
+        } else if (this.currentAge === AgeType.MODERN) {
+            this.currentAge = AgeType.INFORMATION;
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -64,7 +68,7 @@ export class Nation {
      * @returns {Array<City>} Array of city objects
      */
     getCities() {
-        // TODO: Return cities array
+        return this.cities;
     }
 
     /**
@@ -72,7 +76,7 @@ export class Nation {
      * @param {City} city - City object to add
      */
     addCity(city) {
-        // TODO: Add city to cities array
+        this.cities.push(city);
     }
 
     /**
@@ -80,7 +84,10 @@ export class Nation {
      * @param {City} city - City to remove
      */
     removeCity(city) {
-        // TODO: Remove city from cities array
+        const index = this.cities.indexOf(city);
+        if (index > -1) {
+            this.cities.splice(index, 1);
+        }
     }
 
     /**
@@ -88,7 +95,7 @@ export class Nation {
      * @returns {Array<Unit>} Array of unit objects
      */
     getUnits() {
-        // TODO: Return units array
+        return this.units;
     }
 
     /**
@@ -96,7 +103,7 @@ export class Nation {
      * @param {Unit} unit - Unit object to add
      */
     addUnit(unit) {
-        // TODO: Add unit to units array
+        this.units.push(unit);
     }
 
     /**
@@ -104,7 +111,10 @@ export class Nation {
      * @param {Unit} unit - Unit to remove
      */
     removeUnit(unit) {
-        // TODO: Remove unit from units array
+        const index = this.units.indexOf(unit);
+        if (index > -1) {
+            this.units.splice(index, 1);
+        }
     }
 
     /**
@@ -112,7 +122,7 @@ export class Nation {
      * @returns {ResourceManager} Resource manager instance
      */
     getResources() {
-        // TODO: Return resource manager
+        return this.resources;
     }
 
     /**
@@ -121,7 +131,7 @@ export class Nation {
      * @param {number} amount - Amount to add
      */
     addResource(resourceType, amount) {
-        // TODO: Use resource manager to add resources
+        this.resources.add(resourceType, amount);
     }
 
     /**
@@ -131,8 +141,7 @@ export class Nation {
      * @returns {boolean} True if successful
      */
     spendResource(resourceType, amount) {
-        // TODO: Use resource manager to spend resources
-        // Return true if successful, false if insufficient
+        return this.resources.spend(resourceType, amount);
     }
 
     /**
@@ -142,18 +151,46 @@ export class Nation {
      * @returns {boolean} True if enough resources
      */
     hasEnoughResources(resourceType, amount) {
-        // TODO: Use resource manager to check resources
+        return this.resources.hasEnough(resourceType, amount);
     }
 
     /**
      * Process turn for this nation (collect resources, update cities, etc.)
+     * @param {Map} dataMap - Map of hex data for resource collection
      */
-    processTurn() {
-        // TODO: Process turn logic
-        // - Collect resources from cities and tiles
-        // - Update city production
-        // - Reset unit movement points
-        // - Apply any per-turn bonuses
+    processTurn(dataMap = null) {
+        // Collect resources from cities
+        for (const city of this.cities) {
+            const population = city.getPopulation();
+            // Cities generate base resources
+            this.addResource(ResourceType.FOOD, population);
+            this.addResource(ResourceType.PRODUCTION, population);
+            this.addResource(ResourceType.GOLD, population);
+            
+            // Collect resources from city borders (controlled hexes)
+            if (dataMap) {
+                const borders = city.getBorders();
+                for (const borderHex of borders) {
+                    const hexId = `${borderHex.q},${borderHex.r}`;
+                    const hexData = dataMap.get(hexId);
+                    if (hexData && hexData.isOwnedBy(this)) {
+                        const terrainType = hexData.terrain.type;
+                        const yields = getTerrainYields(terrainType);
+                        this.addResource(ResourceType.FOOD, yields.food);
+                        this.addResource(ResourceType.PRODUCTION, yields.production);
+                        this.addResource(ResourceType.GOLD, yields.gold);
+                    }
+                }
+            }
+            
+            // Update city production
+            city.addProduction(population);
+        }
+        
+        // Reset unit movement points
+        for (const unit of this.units) {
+            unit.resetMovement();
+        }
     }
 
     /**
@@ -161,7 +198,7 @@ export class Nation {
      * @returns {Array<string>} Array of technology names
      */
     getTechnologies() {
-        // TODO: Return technologies array
+        return this.technologies;
     }
 
     /**
@@ -169,8 +206,9 @@ export class Nation {
      * @param {string} techName - Technology name
      */
     researchTechnology(techName) {
-        // TODO: Add technology to technologies array
-        // Apply technology bonuses/effects
+        if (!this.technologies.includes(techName)) {
+            this.technologies.push(techName);
+        }
     }
 
     /**
@@ -179,6 +217,6 @@ export class Nation {
      * @returns {boolean} True if researched
      */
     hasTechnology(techName) {
-        // TODO: Check if technology is in technologies array
+        return this.technologies.includes(techName);
     }
 }

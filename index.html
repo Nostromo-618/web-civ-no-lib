@@ -11,19 +11,31 @@
 
     <!-- UI Layer -->
     <div id="ui-layer">
+        <!-- Toast Notifications -->
+        <div id="toast-container"></div>
+
         <!-- Top HUD -->
         <div class="glass-panel top-hud">
             <span class="title civ-font">WebCivNoLib</span>
             <div class="divider"></div>
-            <span class="stat">Gold: <span class="stat-value">120</span></span>
-            <span class="stat">Turn: <span class="stat-value white">1</span></span>
+            <span class="stat">Nation: <span class="stat-value" id="active-nation">Red</span></span>
+            <div class="divider"></div>
+            <span class="stat">Gold: <span class="stat-value" id="gold-value">0</span></span>
+            <span class="stat">Food: <span class="stat-value" id="food-value">0</span></span>
+            <span class="stat">Production: <span class="stat-value" id="production-value">0</span></span>
+            <div class="divider"></div>
+            <span class="stat">Turn: <span class="stat-value white" id="turn-value">1</span></span>
+            <button id="next-turn-btn" class="next-turn-btn">Next Turn</button>
         </div>
 
         <!-- Bottom Selection Panel -->
-        <!-- <div class="glass-panel hidden" id="selection-panel">
+        <div class="glass-panel hidden" id="selection-panel">
             <h2 id="hex-info" class="civ-font">Unknown</h2>
-            <div class="subtitle">Flat-Top Grid System</div>
-        </div> -->
+            <div class="subtitle" id="hex-subtitle">Flat-Top Grid System</div>
+            <div id="unit-info" class="unit-info hidden"></div>
+            <div id="city-info" class="city-info hidden"></div>
+            <div id="action-buttons" class="action-buttons hidden"></div>
+        </div>
     </div>
 
     <script type="module" src="js/main.js"></script>

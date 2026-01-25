@@ -12,11 +12,10 @@ export class GameState {
      * @param {Array<Nation>} nations - Array of nations in the game
      */
     constructor(nations = []) {
-        // TODO: Initialize game state properties
-        // - nations: Array of Nation objects
-        // - currentTurn: Current turn number (starts at 1)
-        // - activeNationIndex: Index of currently active nation
-        // - gamePhase: Current phase (e.g., 'setup', 'playing', 'ended')
+        this.nations = nations;
+        this.currentTurn = 1;
+        this.activeNationIndex = 0;
+        this.gamePhase = 'playing';
     }
 
     /**
@@ -24,9 +23,19 @@ export class GameState {
      * @returns {GameState} This game state instance
      */
     static createDefault() {
-        // TODO: Create Red and Blue nations
-        // Initialize them with starting resources
-        // Return new GameState with these nations
+        const redNation = new Nation('Red', 'red');
+        const blueNation = new Nation('Blue', 'blue');
+        
+        // Give starting resources
+        redNation.addResource('Gold', 100);
+        redNation.addResource('Food', 50);
+        redNation.addResource('Production', 50);
+        
+        blueNation.addResource('Gold', 100);
+        blueNation.addResource('Food', 50);
+        blueNation.addResource('Production', 50);
+        
+        return new GameState([redNation, blueNation]);
     }
 
     /**
@@ -34,7 +43,7 @@ export class GameState {
      * @returns {number} Current turn
      */
     getTurn() {
-        // TODO: Return current turn number
+        return this.currentTurn;
     }
 
     /**
@@ -42,7 +51,8 @@ export class GameState {
      * @returns {Nation} Active nation
      */
     getCurrentNation() {
-        // TODO: Return nation at activeNationIndex
+        if (this.nations.length === 0) return null;
+        return this.nations[this.activeNationIndex];
     }
 
     /**
@@ -50,7 +60,7 @@ export class GameState {
      * @returns {Array<Nation>} Array of all nations
      */
     getNations() {
-        // TODO: Return nations array
+        return this.nations;
     }
 
     /**
@@ -59,33 +69,44 @@ export class GameState {
      * @returns {Nation|undefined} Nation object, or undefined
      */
     getNationByName(name) {
-        // TODO: Find and return nation with matching name
+        return this.nations.find(nation => nation.getName() === name);
+    }
+
+
+    /**
+     * Process turn for the current active nation
+     * @param {Map} dataMap - Map of hex data for resource collection
+     */
+    processCurrentNationTurn(dataMap = null) {
+        const currentNation = this.getCurrentNation();
+        if (currentNation) {
+            currentNation.processTurn(dataMap);
+        }
     }
 
     /**
      * Advance to the next turn
+     * @param {Map} dataMap - Map of hex data for resource collection
      */
-    nextTurn() {
-        // TODO: Process turn logic
-        // 1. Process turn for current active nation
-        // 2. Advance to next nation (or cycle back to first)
-        // 3. If all nations have played, increment turn number
-        // 4. Reset active nation index if needed
-    }
-
-    /**
-     * Process turn for the current active nation
-     */
-    processCurrentNationTurn() {
-        // TODO: Get current nation and call processTurn()
+    nextTurn(dataMap = null) {
+        // Process turn for current active nation
+        this.processCurrentNationTurn(dataMap);
+        
+        // Advance to next nation
+        this.nextNation();
     }
 
     /**
      * Advance to the next nation
      */
     nextNation() {
-        // TODO: Increment activeNationIndex
+        this.activeNationIndex++;
+        
         // If at end of nations array, cycle to 0 and increment turn
+        if (this.activeNationIndex >= this.nations.length) {
+            this.activeNationIndex = 0;
+            this.currentTurn++;
+        }
     }
 
     /**
@@ -93,8 +114,9 @@ export class GameState {
      * @returns {boolean} True if game has ended
      */
     isGameOver() {
-        // TODO: Check win/loss conditions
-        // Return true if game should end
+        // Game ends when one nation has no cities
+        const nationsWithCities = this.nations.filter(nation => nation.getCities().length > 0);
+        return nationsWithCities.length <= 1;
     }
 
     /**
@@ -102,7 +124,7 @@ export class GameState {
      * @returns {string} Current game phase
      */
     getPhase() {
-        // TODO: Return current game phase
+        return this.gamePhase;
     }
 
     /**
@@ -110,6 +132,6 @@ export class GameState {
      * @param {string} phase - New game phase
      */
     setPhase(phase) {
-        // TODO: Set game phase
+        this.gamePhase = phase;
     }
 }

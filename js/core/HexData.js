@@ -13,12 +13,10 @@ export class HexData {
     constructor(hexId, terrainData) {
         this.hexId = hexId;
         this.terrain = terrainData;
-        
-        // TODO: Initialize game state properties
-        // - owner: Nation that controls this hex (null if unclaimed)
-        // - improvements: Array of improvements (farm, mine, etc.)
-        // - units: Array of units present on this hex
-        // - city: City object if a city exists here (null otherwise)
+        this.owner = null;
+        this.improvements = [];
+        this.units = [];
+        this.city = null;
     }
 
     /**
@@ -26,7 +24,7 @@ export class HexData {
      * @param {Nation} nation - The nation that owns this hex
      */
     setOwner(nation) {
-        // TODO: Set owner, update any visual/state changes
+        this.owner = nation;
     }
 
     /**
@@ -34,7 +32,7 @@ export class HexData {
      * @returns {Nation|null} The owning nation, or null if unclaimed
      */
     getOwner() {
-        // TODO: Return owner
+        return this.owner;
     }
 
     /**
@@ -43,7 +41,7 @@ export class HexData {
      * @returns {boolean} True if owned by this nation
      */
     isOwnedBy(nation) {
-        // TODO: Check if owner matches nation
+        return this.owner === nation;
     }
 
     /**
@@ -51,7 +49,9 @@ export class HexData {
      * @param {string} improvementType - Type of improvement (farm, mine, etc.)
      */
     addImprovement(improvementType) {
-        // TODO: Add improvement to improvements array
+        if (!this.improvements.includes(improvementType)) {
+            this.improvements.push(improvementType);
+        }
     }
 
     /**
@@ -59,7 +59,7 @@ export class HexData {
      * @returns {Array<string>} Array of improvement types
      */
     getImprovements() {
-        // TODO: Return improvements array
+        return this.improvements;
     }
 
     /**
@@ -67,7 +67,9 @@ export class HexData {
      * @param {Unit} unit - Unit to add
      */
     addUnit(unit) {
-        // TODO: Add unit to units array
+        if (!this.units.includes(unit)) {
+            this.units.push(unit);
+        }
     }
 
     /**
@@ -75,7 +77,10 @@ export class HexData {
      * @param {Unit} unit - Unit to remove
      */
     removeUnit(unit) {
-        // TODO: Remove unit from units array
+        const index = this.units.indexOf(unit);
+        if (index > -1) {
+            this.units.splice(index, 1);
+        }
     }
 
     /**
@@ -83,7 +88,7 @@ export class HexData {
      * @returns {Array<Unit>} Array of units
      */
     getUnits() {
-        // TODO: Return units array
+        return this.units;
     }
 
     /**
@@ -91,7 +96,10 @@ export class HexData {
      * @param {City} city - City object
      */
     setCity(city) {
-        // TODO: Set city, update owner if needed
+        this.city = city;
+        if (city && city.owner) {
+            this.setOwner(city.owner);
+        }
     }
 
     /**
@@ -99,7 +107,7 @@ export class HexData {
      * @returns {City|null} City object, or null if no city
      */
     getCity() {
-        // TODO: Return city
+        return this.city;
     }
 
     /**
@@ -107,6 +115,6 @@ export class HexData {
      * @returns {boolean} True if city exists
      */
     hasCity() {
-        // TODO: Check if city is not null
+        return this.city !== null;
     }
 }

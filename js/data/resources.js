@@ -20,12 +20,12 @@ export class ResourceManager {
      * @param {Object} initialResources - Initial resource values
      */
     constructor(initialResources = {}) {
-        // TODO: Initialize resource storage
-        this.resources = initialResources || {
-            [ResourceType.GOLD]: 0,
-            [ResourceType.FOOD]: 0,
-            [ResourceType.PRODUCTION]: 0,
-            [ResourceType.SCIENCE]: 0,
+        // Initialize resource storage with defaults
+        this.resources = {
+            [ResourceType.GOLD]: initialResources[ResourceType.GOLD] ?? 0,
+            [ResourceType.FOOD]: initialResources[ResourceType.FOOD] ?? 0,
+            [ResourceType.PRODUCTION]: initialResources[ResourceType.PRODUCTION] ?? 0,
+            [ResourceType.SCIENCE]: initialResources[ResourceType.SCIENCE] ?? 0,
         };
     }
 
@@ -35,7 +35,15 @@ export class ResourceManager {
      * @param {number} amount - Amount to add
      */
     add(resourceType, amount) {
-        // TODO: Add resources (validate amount >= 0)
+        if (amount < 0) {
+            console.warn('Cannot add negative resources');
+            return;
+        }
+        if (this.resources.hasOwnProperty(resourceType)) {
+            this.resources[resourceType] += amount;
+        } else {
+            this.resources[resourceType] = amount;
+        }
     }
 
     /**
@@ -45,7 +53,15 @@ export class ResourceManager {
      * @returns {boolean} True if successful, false if insufficient
      */
     spend(resourceType, amount) {
-        // TODO: Check if enough resources, subtract if yes, return success
+        if (amount < 0) {
+            console.warn('Cannot spend negative resources');
+            return false;
+        }
+        if (!this.hasEnough(resourceType, amount)) {
+            return false;
+        }
+        this.resources[resourceType] -= amount;
+        return true;
     }
 
     /**
@@ -55,7 +71,17 @@ export class ResourceManager {
      * @returns {boolean} True if enough resources
      */
     hasEnough(resourceType, amount) {
-        // TODO: Check if current amount >= required amount
+        const current = this.resources[resourceType] ?? 0;
+        return current >= amount;
+    }
+
+    /**
+     * Get a specific resource amount
+     * @param {string} resourceType - The resource type
+     * @returns {number} Current amount of the resource
+     */
+    get(resourceType) {
+        return this.resources[resourceType] ?? 0;
     }
 
     /**
@@ -63,6 +89,6 @@ export class ResourceManager {
      * @returns {Object} All resource values
      */
     getAll() {
-        // TODO: Return object with all resource types and their values
+        return { ...this.resources };
     }
 }

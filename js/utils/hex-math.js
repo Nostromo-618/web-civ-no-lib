@@ -84,3 +84,20 @@ export function getHexCorners(x, y, size) {
     }
     return corners;
 }
+
+/**
+ * Get the 6 adjacent hex coordinates from a given hex
+ * @param {number} q - Hex column
+ * @param {number} r - Hex row
+ * @returns {Array<{q: number, r: number}>} Array of 6 adjacent hex coordinates
+ */
+export function getAdjacentHexes(q, r) {
+    return [
+        { q: q + 1, r: r },
+        { q: q + 1, r: r - 1 },
+        { q: q, r: r - 1 },
+        { q: q - 1, r: r },
+        { q: q - 1, r: r + 1 },
+        { q: q, r: r + 1 }
+    ];
+}

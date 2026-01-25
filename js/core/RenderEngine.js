@@ -2,6 +2,7 @@
 
 import { getHexCorners } from '../utils/hex-math.js';
 import { TERRAIN_COLORS, DEFAULT_TERRAIN_COLOR } from '../data/terrain.js';
+import { spriteManager } from '../utils/sprites.js';
 import {
     HEX_SIZE,
     BLEED,
@@ -27,6 +28,7 @@ export class RenderEngine {
     #selectedHex = null;
     #onHexSelectCallback = null;
     #initialPositionSet = false;
+    #validMoveHexes = [];
 
     /**
      * Create a new render engine
@@ -57,6 +59,14 @@ export class RenderEngine {
      */
     setGameState(gameState) {
         this.#gameState = gameState;
+    }
+
+    /**
+     * Set valid move hexes for highlighting
+     * @param {Array<{q: number, r: number}>} hexes - Array of valid hex coordinates
+     */
+    setValidMoveHexes(hexes) {
+        this.#validMoveHexes = hexes;
     }
 
     /**
@@ -103,6 +113,17 @@ export class RenderEngine {
             ctx.globalAlpha = 1.0;
         });
 
+        // Draw valid move hexes
+        for (const moveHex of this.#validMoveHexes) {
+            const hex = this.#grid.getHex(moveHex.q, moveHex.r);
+            if (hex) {
+                ctx.globalAlpha = 0.3;
+                ctx.fillStyle = '#4ade80';
+                this.#drawHexagon(hex.x, hex.y, HEX_SIZE, '#4ade80', null, 0);
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
         // Draw highlight
         if (this.#selectedHex) {
             const hex = this.#grid.getHex(this.#selectedHex.q, this.#selectedHex.r);
@@ -121,37 +142,273 @@ export class RenderEngine {
 
     /**
      * Render nation borders and ownership
-     * TODO: Implement rendering of nation-controlled hexes
-     * - Draw borders around owned territory
-     * - Show nation colors on hexes
      */
     #renderNations() {
-        // TODO: Iterate through all nations
-        // For each nation, get owned hexes and render borders/colors
+        if (!this.#gameState || !this.#dataMap) return;
+
+        const ctx = this.#ctx;
+        const nations = this.#gameState.getNations();
+
+        // Nation colors
+        const nationColors = {
+            'red': '#ef4444',
+            'blue': '#3b82f6'
+        };
+
+        // Draw ownership overlay (semi-transparent)
+        ctx.globalAlpha = 0.12;
+        for (const nation of nations) {
+            const color = nationColors[nation.getColor()] || '#888888';
+            ctx.fillStyle = color;
+
+            // Iterate through all hexes to find owned ones
+            this.#dataMap.forEach((hexData, hexId) => {
+                if (hexData.isOwnedBy(nation)) {
+                    const [q, r] = hexId.split(',').map(Number);
+                    const hex = this.#grid.getHex(q, r);
+                    if (hex) {
+                        this.#drawHexagon(hex.x, hex.y, HEX_SIZE, color, null, 0);
+                    }
+                }
+            });
+        }
+        ctx.globalAlpha = 1.0;
+
+        // Draw territory border lines (solid lines around territory edges)
+        this.#renderTerritoryBorders(nations, nationColors);
+    }
+
+    /**
+     * Draw border lines around the edges of nation territory
+     */
+    #renderTerritoryBorders(nations, nationColors) {
+        const ctx = this.#ctx;
+
+        // Adjacent hex direction offsets (matches getAdjacentHexes order)
+        const directions = [
+            { q: 1, r: 0 },   // East
+            { q: 1, r: -1 },  // Northeast
+            { q: 0, r: -1 },  // Northwest
+            { q: -1, r: 0 },  // West
+            { q: -1, r: 1 },  // Southwest
+            { q: 0, r: 1 }    // Southeast
+        ];
+
+        for (const nation of nations) {
+            const color = nationColors[nation.getColor()] || '#888888';
+
+            // Collect all territory border edges
+            const borderEdges = [];
+
+            this.#dataMap.forEach((hexData, hexId) => {
+                if (!hexData.isOwnedBy(nation)) return;
+
+                const [q, r] = hexId.split(',').map(Number);
+                const hex = this.#grid.getHex(q, r);
+                if (!hex) return;
+
+                // Check each of the 6 directions
+                for (let i = 0; i < 6; i++) {
+                    const dir = directions[i];
+                    const neighborId = `${q + dir.q},${r + dir.r}`;
+                    const neighborData = this.#dataMap.get(neighborId);
+
+                    // Draw border if neighbor is not owned by same nation
+                    const isEdge = !neighborData || !neighborData.isOwnedBy(nation);
+
+                    if (isEdge) {
+                        borderEdges.push({ hex, edgeIndex: i });
+                    }
+                }
+            });
+
+            // Draw all border edges for this nation
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            for (const { hex, edgeIndex } of borderEdges) {
+                const corners = this.#getHexCorners(hex.x, hex.y, HEX_SIZE);
+                const startCorner = corners[edgeIndex];
+                const endCorner = corners[(edgeIndex + 1) % 6];
+
+                ctx.beginPath();
+                ctx.moveTo(startCorner.x, startCorner.y);
+                ctx.lineTo(endCorner.x, endCorner.y);
+                ctx.stroke();
+            }
+        }
+    }
+
+    /**
+     * Get hex corner points (internal helper)
+     */
+    #getHexCorners(x, y, size) {
+        const corners = [];
+        for (let i = 0; i < 6; i++) {
+            const angleDeg = 60 * i;
+            const angleRad = (Math.PI / 180) * angleDeg;
+            corners.push({
+                x: x + size * Math.cos(angleRad),
+                y: y + size * Math.sin(angleRad)
+            });
+        }
+        return corners;
     }
 
     /**
      * Render cities on the map
-     * TODO: Implement city rendering
-     * - Draw city markers at city positions
-     * - Show city names
-     * - Display city size/population indicator
      */
     #renderCities() {
-        // TODO: Get all cities from all nations
-        // For each city, get position and render city marker
+        if (!this.#gameState || !this.#dataMap) return;
+
+        const ctx = this.#ctx;
+        const nations = this.#gameState.getNations();
+        const citySprite = spriteManager.get('city');
+
+        // Nation colors
+        const nationColors = {
+            'red': '#ef4444',
+            'blue': '#3b82f6'
+        };
+
+        for (const nation of nations) {
+            const cities = nation.getCities();
+            const color = nationColors[nation.getColor()] || '#888888';
+
+            for (const city of cities) {
+                const pos = city.getPosition();
+                const hex = this.#grid.getHex(pos.q, pos.r);
+                if (!hex) continue;
+
+                const spriteSize = HEX_SIZE * 0.9;
+
+                if (citySprite) {
+                    // Draw sprite with color tint
+                    ctx.save();
+                    ctx.globalAlpha = 0.9;
+                    ctx.drawImage(
+                        citySprite,
+                        hex.x - spriteSize,
+                        hex.y - spriteSize,
+                        spriteSize * 2,
+                        spriteSize * 2
+                    );
+                    // Add color overlay
+                    ctx.globalCompositeOperation = 'source-atop';
+                    ctx.fillStyle = color;
+                    ctx.globalAlpha = 0.3;
+                    ctx.fillRect(hex.x - spriteSize, hex.y - spriteSize, spriteSize * 2, spriteSize * 2);
+                    ctx.restore();
+                } else {
+                    // Fallback: circle marker
+                    ctx.fillStyle = color;
+                    ctx.beginPath();
+                    ctx.arc(hex.x, hex.y, HEX_SIZE * 0.4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+
+                // Draw city name
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 10px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.shadowColor = '#000000';
+                ctx.shadowBlur = 3;
+                ctx.fillText(city.getName(), hex.x, hex.y - HEX_SIZE * 0.6);
+                ctx.shadowBlur = 0;
+
+                // Draw population indicator
+                ctx.fillStyle = '#facc15';
+                ctx.font = '8px sans-serif';
+                ctx.textBaseline = 'top';
+                ctx.fillText(`Pop: ${city.getPopulation()}`, hex.x, hex.y + HEX_SIZE * 0.6);
+            }
+        }
     }
 
     /**
      * Render units on the map
-     * TODO: Implement unit rendering
-     * - Draw unit icons/sprites at unit positions
-     * - Show unit type indicators
-     * - Display movement/health status if needed
      */
     #renderUnits() {
-        // TODO: Get all units from all nations
-        // For each unit, get position and render unit marker
+        if (!this.#gameState || !this.#dataMap) return;
+
+        const ctx = this.#ctx;
+        const nations = this.#gameState.getNations();
+        const warriorSprite = spriteManager.get('warrior');
+        const settlerSprite = spriteManager.get('settler');
+
+        // Nation colors
+        const nationColors = {
+            'red': '#ef4444',
+            'blue': '#3b82f6'
+        };
+
+        for (const nation of nations) {
+            const units = nation.getUnits();
+            const color = nationColors[nation.getColor()] || '#888888';
+
+            for (const unit of units) {
+                const pos = unit.getPosition();
+                const hex = this.#grid.getHex(pos.q, pos.r);
+                if (!hex) continue;
+
+                const spriteSize = HEX_SIZE * 0.55;
+                const sprite = unit.unitType === 'WARRIOR' ? warriorSprite : settlerSprite;
+
+                if (sprite) {
+                    // Draw sprite
+                    ctx.save();
+                    ctx.drawImage(
+                        sprite,
+                        hex.x - spriteSize,
+                        hex.y - spriteSize,
+                        spriteSize * 2,
+                        spriteSize * 2
+                    );
+                    // Add nation color ring
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(hex.x, hex.y, spriteSize * 0.9, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.restore();
+                } else {
+                    // Fallback: geometric shapes
+                    ctx.fillStyle = color;
+                    if (unit.unitType === 'WARRIOR') {
+                        ctx.beginPath();
+                        ctx.moveTo(hex.x, hex.y - HEX_SIZE * 0.3);
+                        ctx.lineTo(hex.x - HEX_SIZE * 0.25, hex.y + HEX_SIZE * 0.2);
+                        ctx.lineTo(hex.x + HEX_SIZE * 0.25, hex.y + HEX_SIZE * 0.2);
+                        ctx.closePath();
+                        ctx.fill();
+                    } else {
+                        ctx.beginPath();
+                        ctx.arc(hex.x, hex.y, HEX_SIZE * 0.25, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                }
+
+                // Show movement indicator if unit can move
+                if (unit.canMove()) {
+                    ctx.fillStyle = '#4ade80';
+                    ctx.beginPath();
+                    ctx.arc(hex.x + HEX_SIZE * 0.35, hex.y - HEX_SIZE * 0.35, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+            }
+        }
     }
 
     #resize() {

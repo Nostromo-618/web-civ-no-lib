@@ -1,5 +1,7 @@
 'use strict';
 
+import { UNIT_TYPES } from '../data/units.js';
+
 /**
  * Represents a city on the map
  */
@@ -14,14 +16,13 @@ export class City {
         this.name = name;
         this.position = position; // {q, r}
         this.owner = owner;
-        
-        // TODO: Initialize city properties
-        // - population: Current population
-        // - productionQueue: Array of items being produced
-        // - currentProduction: Current item in production
-        // - productionProgress: Progress toward current production
-        // - borders: Array of hex coordinates controlled by city
-        // - buildings: Array of building types constructed
+        this.population = 1;
+        this.productionQueue = [];
+        this.currentProduction = null;
+        this.productionProgress = 0;
+        this.borders = [];
+        this.buildings = [];
+        this.onProductionComplete = null; // Callback for when production completes
     }
 
     /**
@@ -29,7 +30,7 @@ export class City {
      * @returns {string} City name
      */
     getName() {
-        // TODO: Return name
+        return this.name;
     }
 
     /**
@@ -37,7 +38,7 @@ export class City {
      * @returns {{q: number, r: number}} Hex coordinates
      */
     getPosition() {
-        // TODO: Return position
+        return this.position;
     }
 
     /**
@@ -45,7 +46,7 @@ export class City {
      * @returns {number} Population count
      */
     getPopulation() {
-        // TODO: Return population
+        return this.population;
     }
 
     /**
@@ -53,7 +54,7 @@ export class City {
      * @param {number} amount - Amount to increase (default 1)
      */
     growPopulation(amount = 1) {
-        // TODO: Increase population, check for growth requirements
+        this.population += amount;
     }
 
     /**
@@ -61,7 +62,7 @@ export class City {
      * @returns {number} Production points accumulated
      */
     getProduction() {
-        // TODO: Return production progress
+        return this.productionProgress;
     }
 
     /**
@@ -69,9 +70,44 @@ export class City {
      * @param {number} amount - Production points to add
      */
     addProduction(amount) {
-        // TODO: Add to production progress
-        // Check if current production is complete
-        // If complete, add to queue or notify, start next item
+        if (!this.currentProduction) {
+            // If no current production, try to start next item from queue
+            if (this.productionQueue.length > 0) {
+                this.currentProduction = this.productionQueue.shift();
+                this.productionProgress = 0;
+            } else {
+                return; // Nothing to produce
+            }
+        }
+
+        this.productionProgress += amount;
+        
+        // Check if production is complete (costs from unit types)
+        let cost = 50; // Default cost
+        if (this.currentProduction === 'WARRIOR' && UNIT_TYPES.WARRIOR) {
+            cost = UNIT_TYPES.WARRIOR.cost;
+        } else if (this.currentProduction === 'SETTLER' && UNIT_TYPES.SETTLER) {
+            cost = UNIT_TYPES.SETTLER.cost;
+        } else if (this.currentProduction === 'WORKER' && UNIT_TYPES.WORKER) {
+            cost = UNIT_TYPES.WORKER.cost;
+        }
+        
+        if (this.productionProgress >= cost) {
+            // Production complete
+            const completedItem = this.currentProduction;
+            this.productionProgress = 0;
+            this.currentProduction = null;
+            
+            // Notify completion
+            if (this.onProductionComplete) {
+                this.onProductionComplete(completedItem, this);
+            }
+            
+            // Start next item from queue if available
+            if (this.productionQueue.length > 0) {
+                this.currentProduction = this.productionQueue.shift();
+            }
+        }
     }
 
     /**
@@ -79,8 +115,8 @@ export class City {
      * @param {string} itemType - Type of item (unit type, building type)
      */
     setProduction(itemType) {
-        // TODO: Set current production item
-        // Reset production progress
+        this.currentProduction = itemType;
+        this.productionProgress = 0;
     }
 
     /**
@@ -88,7 +124,7 @@ export class City {
      * @returns {string|null} Current production type, or null
      */
     getCurrentProduction() {
-        // TODO: Return current production item
+        return this.currentProduction;
     }
 
     /**
@@ -96,7 +132,7 @@ export class City {
      * @returns {Array<string>} Array of queued production items
      */
     getProductionQueue() {
-        // TODO: Return production queue
+        return this.productionQueue;
     }
 
     /**
@@ -104,7 +140,7 @@ export class City {
      * @param {string} itemType - Item to queue
      */
     queueProduction(itemType) {
-        // TODO: Add to production queue
+        this.productionQueue.push(itemType);
     }
 
     /**
@@ -112,7 +148,7 @@ export class City {
      * @returns {Array<{q: number, r: number}>} Array of hex coordinates
      */
     getBorders() {
-        // TODO: Return borders array
+        return this.borders;
     }
 
     /**
@@ -120,7 +156,13 @@ export class City {
      * @param {Array<{q: number, r: number}>} newHexes - Hexes to add to borders
      */
     expandBorders(newHexes) {
-        // TODO: Add hexes to borders, update ownership
+        for (const hex of newHexes) {
+            // Check if hex is already in borders
+            const exists = this.borders.some(b => b.q === hex.q && b.r === hex.r);
+            if (!exists) {
+                this.borders.push(hex);
+            }
+        }
     }
 
     /**
@@ -128,7 +170,7 @@ export class City {
      * @returns {Array<string>} Array of building types
      */
     getBuildings() {
-        // TODO: Return buildings array
+        return this.buildings;
     }
 
     /**
@@ -136,7 +178,9 @@ export class City {
      * @param {string} buildingType - Type of building
      */
     addBuilding(buildingType) {
-        // TODO: Add building to buildings array
+        if (!this.buildings.includes(buildingType)) {
+            this.buildings.push(buildingType);
+        }
     }
 
     /**
@@ -145,6 +189,6 @@ export class City {
      * @returns {boolean} True if building exists
      */
     hasBuilding(buildingType) {
-        // TODO: Check if building is in buildings array
+        return this.buildings.includes(buildingType);
     }
 }

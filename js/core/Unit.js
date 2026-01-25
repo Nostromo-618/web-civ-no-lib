@@ -15,13 +15,15 @@ export class Unit {
         this.position = position; // {q, r}
         this.owner = owner;
         
-        // TODO: Initialize unit properties
-        // - movementPoints: Current movement points (resets each turn)
-        // - maxMovement: Maximum movement points per turn
-        // - health: Current health (0-100 or similar)
-        // - maxHealth: Maximum health
-        // - strength: Combat strength
-        // - hasActed: Boolean if unit has acted this turn
+        // Initialize unit properties based on type (defaults, will be overridden by unit types)
+        // Default stats - will be set properly when unit types are defined
+        this.maxMovement = 2;
+        this.movementPoints = this.maxMovement;
+        this.maxHealth = 100;
+        this.health = this.maxHealth;
+        this.strength = 0; // Will be set based on unit type
+        this.hasActed = false;
+        this.canFoundCity = false; // Only settlers can found cities
     }
 
     /**
@@ -29,7 +31,7 @@ export class Unit {
      * @returns {{q: number, r: number}} Hex coordinates
      */
     getPosition() {
-        // TODO: Return position
+        return this.position;
     }
 
     /**
@@ -37,7 +39,7 @@ export class Unit {
      * @returns {number} Remaining movement points
      */
     getMovement() {
-        // TODO: Return current movement points
+        return this.movementPoints;
     }
 
     /**
@@ -45,7 +47,7 @@ export class Unit {
      * @returns {number} Max movement per turn
      */
     getMaxMovement() {
-        // TODO: Return max movement
+        return this.maxMovement;
     }
 
     /**
@@ -56,9 +58,13 @@ export class Unit {
      * @returns {boolean} True if move was successful
      */
     move(q, r, movementCost) {
-        // TODO: Check if enough movement points
-        // Update position, subtract movement cost
-        // Return true if successful
+        if (this.movementPoints < movementCost) {
+            return false;
+        }
+        
+        this.position = { q, r };
+        this.movementPoints -= movementCost;
+        return true;
     }
 
     /**
@@ -67,16 +73,26 @@ export class Unit {
      * @returns {Object} Combat result {success: boolean, damage: number}
      */
     attack(target) {
-        // TODO: Calculate combat based on strength, terrain, etc.
-        // Apply damage to target
-        // Return combat result
+        if (!this.canAttack() || this.strength === 0) {
+            return { success: false, damage: 0 };
+        }
+        
+        // Calculate damage: base strength + random variance (80-120%)
+        const variance = 0.8 + Math.random() * 0.4;
+        const damage = Math.floor(this.strength * variance);
+        
+        target.takeDamage(damage);
+        this.hasActed = true;
+        
+        return { success: true, damage };
     }
 
     /**
      * Reset movement points for new turn
      */
     resetMovement() {
-        // TODO: Reset movement points to max, set hasActed to false
+        this.movementPoints = this.maxMovement;
+        this.hasActed = false;
     }
 
     /**
@@ -84,7 +100,7 @@ export class Unit {
      * @returns {boolean} True if has movement points remaining
      */
     canMove() {
-        // TODO: Check if movement points > 0 and has not acted
+        return this.movementPoints > 0 && !this.hasActed;
     }
 
     /**
@@ -92,7 +108,7 @@ export class Unit {
      * @returns {boolean} True if can attack
      */
     canAttack() {
-        // TODO: Check if unit has not acted and has attack capability
+        return !this.hasActed && this.strength > 0;
     }
 
     /**
@@ -100,7 +116,7 @@ export class Unit {
      * @param {number} damage - Amount of damage
      */
     takeDamage(damage) {
-        // TODO: Reduce health, check if unit is destroyed
+        this.health = Math.max(0, this.health - damage);
     }
 
     /**
@@ -108,7 +124,7 @@ export class Unit {
      * @returns {boolean} True if health <= 0
      */
     isDestroyed() {
-        // TODO: Check if health <= 0
+        return this.health <= 0;
     }
 
     /**
@@ -116,6 +132,6 @@ export class Unit {
      * @returns {number} Combat strength value
      */
     getStrength() {
-        // TODO: Return strength (may include bonuses)
+        return this.strength;
     }
 }
